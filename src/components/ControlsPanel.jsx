@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Slider from "./Slider.jsx";
-import PalettePicker from "./PalettePicker.jsx";
 import IconButton from "./IconButton.jsx";
 import { formatSeed } from "../lib/seed.js";
 
@@ -25,9 +24,6 @@ export default function ControlsPanel({
   setParam,
   seed,
   newSeed,
-  palettes,
-  paletteIndex,
-  setPaletteIndex,
   onExport,
   onFullscreen,
   isFullscreen,
@@ -67,37 +63,38 @@ export default function ControlsPanel({
             transition={{ type: "spring", stiffness: 240, damping: 28 }}
             className="fixed top-0 right-0 z-20 h-full w-[340px] glass shadow-[0_0_60px_rgba(0,0,0,0.5)] border-l border-[var(--color-space-border)] flex flex-col"
           >
-            <header className="px-5 pt-5 pb-3 border-b border-[var(--color-space-border)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-space-muted)]">
-                    Observatory
-                  </div>
-                  <h1 className="text-[22px] font-medium text-white mt-0.5">
-                    NebulaForge
-                  </h1>
+            <header className="px-5 pt-5 pb-4 border-b border-[var(--color-space-border)]">
+              <div className="pr-12">
+                <div className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-space-muted)]">
+                  Observatory
                 </div>
-                <div className="flex items-center gap-1.5 pr-12">
-                  <IconButton title="New seed" onClick={newSeed}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                      <rect
-                        x="3"
-                        y="3"
-                        width="18"
-                        height="18"
-                        rx="3"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <circle cx="8" cy="8" r="1.4" fill="currentColor" />
-                      <circle cx="16" cy="8" r="1.4" fill="currentColor" />
-                      <circle cx="8" cy="16" r="1.4" fill="currentColor" />
-                      <circle cx="16" cy="16" r="1.4" fill="currentColor" />
-                      <circle cx="12" cy="12" r="1.4" fill="currentColor" />
-                    </svg>
-                  </IconButton>
-                </div>
+                <h1 className="text-[22px] font-medium text-white mt-0.5">
+                  NebulaForge
+                </h1>
               </div>
+
+              <button
+                type="button"
+                onClick={newSeed}
+                className="mt-4 w-full h-10 rounded-md border border-[var(--color-space-border-strong)] bg-white/[0.04] hover:bg-[var(--color-space-accent)]/15 hover:border-[var(--color-space-accent)] hover:shadow-[0_0_22px_var(--color-space-accent-glow)] transition-all duration-200 flex items-center justify-center gap-2 text-[12px] tracking-[0.18em] uppercase text-white font-medium"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3.2"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                </svg>
+                Generate
+              </button>
 
               <div className="mt-3 flex items-center justify-between">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-space-muted)]">
@@ -109,37 +106,24 @@ export default function ControlsPanel({
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto scroll-thin px-5 py-4 space-y-5">
-              <section>
-                <h2 className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-space-muted)] mb-2">
-                  Palette
-                </h2>
-                <PalettePicker
-                  palettes={palettes}
-                  value={paletteIndex}
-                  onChange={setPaletteIndex}
-                />
-              </section>
-
-              <section className="space-y-3.5">
-                <h2 className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-space-muted)]">
-                  Parameters
-                </h2>
-                {SLIDER_DEFS.map((def) => {
-                  const r = paramRanges[def.key];
-                  return (
-                    <Slider
-                      key={def.key}
-                      label={def.label}
-                      value={params[def.key]}
-                      min={r.min}
-                      max={r.max}
-                      step={r.step}
-                      onChange={(v) => setParam(def.key, v)}
-                    />
-                  );
-                })}
-              </section>
+            <div className="flex-1 overflow-y-auto scroll-thin px-5 py-4 space-y-3.5">
+              <h2 className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-space-muted)]">
+                Parameters
+              </h2>
+              {SLIDER_DEFS.map((def) => {
+                const r = paramRanges[def.key];
+                return (
+                  <Slider
+                    key={def.key}
+                    label={def.label}
+                    value={params[def.key]}
+                    min={r.min}
+                    max={r.max}
+                    step={r.step}
+                    onChange={(v) => setParam(def.key, v)}
+                  />
+                );
+              })}
             </div>
 
             <footer className="px-5 py-4 border-t border-[var(--color-space-border)] flex items-center gap-2">

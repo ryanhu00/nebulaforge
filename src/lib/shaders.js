@@ -167,13 +167,28 @@ void main() {
   float radial = smoothstep(1.25, 0.15, length(p));
   density *= radial;
 
-  vec3 col = palette4(density, uPalette0, uPalette1, uPalette2, uPalette3);
+  // Color-selection noise field — low frequency so each palette color
+  // occupies a sizeable region; drifts on its own slow timeline so the
+  // dominant hues morph independently of the cloud shape.
+  vec3 colorPos = samplePos * 0.42 + vec3(13.7, -5.3, t * 0.65);
+  float hueField = fbm(colorPos, 2.0, 3);
+  hueField = clamp(hueField * 0.5 + 0.5, 0.0, 1.0);
 
-  float glowField = fbm(samplePos * 0.35 + vec3(-4.2, 3.1, t * 0.6), 2.0, 4);
-  glowField = glowField * 0.5 + 0.5;
+  vec3 cloudCol = palette4(hueField, uPalette0, uPalette1, uPalette2, uPalette3);
+
+  // Density gives intensity; raising to a power keeps low-density areas
+  // dark so the cosmic background reads as deep black.
+  float intensity = pow(density, 1.1);
+  vec3 col = cloudCol * intensity;
+
+  // Glow halo with a slightly shifted hue selection — surrounding gas
+  // often appears in a different emission line than the dense core.
+  float glowField = fbm(samplePos * 0.18 + vec3(-4.2, 3.1, t * 0.6), 2.0, 3);
+  glowField = clamp(glowField * 0.5 + 0.5, 0.0, 1.0);
   glowField = pow(glowField, 1.8) * radial;
-  vec3 glowCol = mix(uPalette1, uPalette2, 0.6);
-  col += glowCol * glowField * uGlowIntensity * 0.55;
+  float glowHueT = fract(hueField + 0.27);
+  vec3 glowCol = palette4(glowHueT, uPalette0, uPalette1, uPalette2, uPalette3);
+  col += glowCol * glowField * uGlowIntensity * 0.6;
 
   vec3 hsv = rgb2hsv(col);
   hsv.x = fract(hsv.x + uHueShift);
@@ -184,7 +199,7 @@ void main() {
   col *= uBrightness;
   col = max(col, 0.0);
 
-  float alpha = clamp(density + glowField * uGlowIntensity * 0.25 * radial, 0.0, 1.0);
+  float alpha = clamp(density + glowField * uGlowIntensity * 0.3 * radial, 0.0, 1.0);
   alpha = pow(alpha, 0.85);
 
   gl_FragColor = vec4(col * alpha, alpha);

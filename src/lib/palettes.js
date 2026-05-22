@@ -1,29 +1,74 @@
-// Each palette is a 4-stop gradient sampled from dim background -> hot core.
-// Stops are linear RGB triples in [0,1]; the shader mixes between them as density rises.
-// previewCSS is for the UI swatch only.
+import { mulberry32 } from "./seed.js";
 
-const hex = (h) => {
-  const n = parseInt(h.slice(1), 16);
-  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
-};
+// HSL -> RGB conversion (all components in [0,1]).
+function hslToRgb(h, s, l) {
+  const k = (n) => (n + h * 12) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) =>
+    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [f(0), f(8), f(4)];
+}
 
-const palette = (name, stops) => ({
-  name,
-  stops: stops.map(hex),
-  previewCSS: `linear-gradient(135deg, ${stops.join(", ")})`,
-});
+// Build a 4-color random palette from a seed. The shader blends these
+// across the canvas via a low-frequency color-selection noise field, so
+// different regions of the nebula take on different (but compatible) hues.
+//
+// A small set of harmony strategies keeps the colors visually cohesive
+// without ever feeling repetitive across seeds.
+export function generatePalette(seed) {
+  const rng = mulberry32((seed >>> 0) ^ 0xc0ffee_19);
 
-export const PALETTES = [
-  palette("Orion", ["#0a0420", "#3a1a6b", "#c4528e", "#ffd1a8"]),
-  palette("Lagoon", ["#03101f", "#0e3a5e", "#6fb6e0", "#ffe8c4"]),
-  palette("Eagle", ["#100804", "#5a2a14", "#d6883a", "#ffe5a8"]),
-  palette("Pillars of Creation", ["#0a0a06", "#2a3a18", "#c97a3a", "#f8d680"]),
-  palette("Hubble SHO", ["#04081c", "#0e7a8a", "#e0a830", "#ff6a4a"]),
-  palette("Infrared", ["#1a0606", "#7a1818", "#ff9a5a", "#fff0d2"]),
-  palette("Hydrogen Alpha", ["#160308", "#5a0a2a", "#d23a6c", "#ffd6e2"]),
-  palette("Oxygen III", ["#020a14", "#0a3a5e", "#3ec2c8", "#d6f6ff"]),
-  palette("Deep Space Violet", ["#06031a", "#3a1a7a", "#a05ad6", "#ffd1f0"]),
-  palette("Cosmic Fire", ["#1a0500", "#8a1e08", "#ff7a1a", "#fff4c4"]),
-];
+  // Pick a harmony strategy.
+  const strategy = Math.floor(rng() * 5);
+  const baseHue = rng();
 
-export const DEFAULT_PALETTE_INDEX = 4; // Hubble SHO — cinematic default
+  let hues;
+  if (strategy === 0) {
+    // Analogous — neighbouring hues, very cohesive (Hubble-like).
+    const spread = 0.05 + rng() * 0.12;
+    hues = [baseHue, baseHue + spread, baseHue + spread * 2, baseHue + spread * 3];
+  } else if (strategy === 1) {
+    // Complementary pair — two opposing hues, two near-neighbors of each.
+    hues = [
+      baseHue,
+      baseHue + 0.5,
+      baseHue + 0.04 + rng() * 0.06,
+      baseHue + 0.5 - (0.04 + rng() * 0.06),
+    ];
+  } else if (strategy === 2) {
+    // Split-complementary — base + two neighbours of its opposite.
+    const split = 0.07 + rng() * 0.06;
+    hues = [
+      baseHue,
+      baseHue + 0.5 - split,
+      baseHue + 0.5 + split,
+      baseHue + 0.02 + rng() * 0.05,
+    ];
+  } else if (strategy === 3) {
+    // Triadic — three evenly spaced hues plus a near-base accent.
+    hues = [baseHue, baseHue + 1 / 3, baseHue + 2 / 3, baseHue + 0.05 + rng() * 0.06];
+  } else {
+    // Free — fully random, occasionally chaotic and striking.
+    hues = [rng(), rng(), rng(), rng()];
+  }
+
+  const stops = hues.map((h, i) => {
+    const sat = 0.7 + rng() * 0.28;
+    // Lightness varies a bit per stop so the four colors aren't identical
+    // in luminance — gives subtle tonal depth when they blend.
+    const lit = 0.42 + rng() * 0.18 + (i % 2 === 0 ? 0.0 : 0.05);
+    const hue = ((h % 1) + 1) % 1;
+    return hslToRgb(hue, sat, Math.min(0.72, lit));
+  });
+
+  // Light shuffle so the stop order isn't always hue-monotonic, which
+  // lets the color-selection noise field create unexpected adjacencies.
+  for (let i = stops.length - 1; i > 0; i--) {
+    if (rng() < 0.35) {
+      const j = Math.floor(rng() * (i + 1));
+      [stops[i], stops[j]] = [stops[j], stops[i]];
+    }
+  }
+
+  return stops;
+}

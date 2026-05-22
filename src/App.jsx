@@ -45,9 +45,6 @@ export default function App() {
         setParam={controller.setParam}
         seed={controller.seed}
         newSeed={controller.newSeed}
-        palettes={controller.palettes}
-        paletteIndex={controller.paletteIndex}
-        setPaletteIndex={controller.setPaletteIndex}
         onExport={controller.exportPNG}
         onFullscreen={controller.toggleFullscreen}
         isFullscreen={controller.isFullscreen}

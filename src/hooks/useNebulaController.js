@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createNebulaRenderer } from "../lib/nebulaRenderer.js";
 import { createStarRenderer } from "../lib/starRenderer.js";
-import { PALETTES, DEFAULT_PALETTE_INDEX } from "../lib/palettes.js";
+import { generatePalette } from "../lib/palettes.js";
 import { mulberry32, randomSeed, formatSeed } from "../lib/seed.js";
 
 export const DEFAULT_PARAMS = {
@@ -60,13 +60,14 @@ function makeView() {
 
 export function useNebulaController({ nebulaCanvasRef, starCanvasRef, containerRef }) {
   const [seed, setSeed] = useState(() => randomSeed());
-  const [paletteIndex, setPaletteIndex] = useState(DEFAULT_PALETTE_INDEX);
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const paramsRef = useRef(params);
   const seedRef = useRef(seed);
-  const paletteRef = useRef(PALETTES[paletteIndex]);
+  // Palette is fully derived from the seed — every Generate produces a
+  // fresh multi-hue palette that blends across the nebula.
+  const paletteRef = useRef(generatePalette(seed));
   const seedOffsetsRef = useRef(seedToOffsets(seed));
   const viewRef = useRef(makeView());
   const timeRef = useRef(0);
@@ -81,12 +82,9 @@ export function useNebulaController({ nebulaCanvasRef, starCanvasRef, containerR
   }, [params]);
 
   useEffect(() => {
-    paletteRef.current = PALETTES[paletteIndex];
-  }, [paletteIndex]);
-
-  useEffect(() => {
     seedRef.current = seed;
     seedOffsetsRef.current = seedToOffsets(seed);
+    paletteRef.current = generatePalette(seed);
   }, [seed]);
 
   useEffect(() => {
@@ -157,7 +155,7 @@ export function useNebulaController({ nebulaCanvasRef, starCanvasRef, containerR
         },
         { cameraX, cameraY, zoom: v.zoom },
         timeRef.current,
-        paletteRef.current.stops
+        paletteRef.current
       );
 
       rafRef.current = requestAnimationFrame(tick);
@@ -256,9 +254,6 @@ export function useNebulaController({ nebulaCanvasRef, starCanvasRef, containerR
     seed,
     setSeed,
     newSeed,
-    paletteIndex,
-    setPaletteIndex,
-    palettes: PALETTES,
     viewRef,
     setView,
     resetView,
